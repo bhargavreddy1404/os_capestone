@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DFS Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Charts.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-900 text-white p-10">
+
+<h1 class="text-4xl text-center text-green-400 font-bold mb-10">
+    🚀 Distributed File System Dashboard (DFS)
+</h1>
+<h1 style="font-size:50px; color:red;">TEST VERSION LOADED ✔</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+    <!-- Upload Section -->
+    <div class="bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+        <h2 class="text-xl text-green-400 mb-4">📤 Upload File</h2>
+
+        <input id="fileUp" type="file" class="w-full p-2 bg-gray-700 rounded">
+
+        <button onclick="uploadFile()" 
+                class="w-full mt-4 p-3 bg-green-600 hover:bg-green-700 rounded text-white">
+            Upload
+        </button>
+
+        <p id="upMsg" class="text-green-300 mt-3"></p>
+    </div>
+
+    <!-- Download Section -->
+    <div class="bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+        <h2 class="text-xl text-blue-400 mb-4">📥 Download File</h2>
+
+        <select id="fileList" class="w-full p-2 bg-gray-700 rounded">
+            {% for f in files %}
+            <option>{{f}}</option>
+            {% endfor %}
+        </select>
+
+        <button onclick="downloadFile()"
+                class="w-full mt-4 p-3 bg-blue-600 hover:bg-blue-700 rounded text-white">
+            Download
+        </button>
+
+        <p id="downMsg" class="text-blue-300 mt-3"></p>
+    </div>
+
+    <!-- Metadata Section -->
+    <div class="bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+        <h2 class="text-xl text-yellow-400 mb-4">📂 Chunk Metadata</h2>
+
+        <select id="metaFile" class="w-full p-2 bg-gray-700 rounded">
+            {% for f in files %}
+            <option>{{f}}</option>
+            {% endfor %}
+        </select>
+
+        <button onclick="loadChunks()"
+                class="w-full mt-4 p-3 bg-yellow-500 text-black hover:bg-yellow-600 rounded">
+            Load Chunks
+        </button>
+
+        <select id="chunkList"
+                class="w-full p-2 bg-gray-700 rounded mt-3"></select>
+
+        <button onclick="getMetadata()"
+                class="w-full mt-4 p-3 bg-yellow-500 text-black hover:bg-yellow-600 rounded">
+            Get Metadata
+        </button>
+
+        <pre id="metaBox" 
+             class="bg-gray-900 text-green-300 p-3 rounded mt-4 h-40 overflow-auto"></pre>
+    </div>
+
+</div>
+
+<!-- PERFORMANCE SECTION -->
+<h2 class="text-3xl text-center text-purple-400 font-bold mt-16 mb-8">
+    📊 Performance Analysis & Graphs
+</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+
+    <!-- Upload Time Graph -->
+    <div class="bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+        <h3 class="text-xl text-pink-400 mb-4 text-center">📈 Upload Time Graph</h3>
+        <canvas id="uploadChart"></canvas>
+    </div>
+
+    <!-- Node Usage Pie Chart -->
+    <div class="bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+        <h3 class="text-xl text-teal-400 mb-4 text-center">🥧 Node Usage Chart</h3>
+        <canvas id="nodeChart"></canvas>
+    </div>
+
+</div>
+
+<script>
+/* ------------------- UPLOAD FILE ------------------- */
+function uploadFile() {
+    let f = document.getElementById("fileUp").files[0];
+    let form = new FormData();
+    form.append("file", f);
+
+    fetch("/upload", { method:"POST", body: form })
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById("upMsg").innerText = d.msg;
+        setTimeout(()=>location.reload(), 1000);
+    });
+}
+
+/* ------------------- LOAD CHUNKS ------------------- */
+function loadChunks() {
+    let form = new FormData();
+    form.append("name", document.getElementById("metaFile").value);
+
+    fetch("/get_chunks", { method:"POST", body: form })
+    .then(r=>r.json())
+    .then(list=>{
+        let sel = document.getElementById("chunkList");
+        sel.innerHTML = "";
+        list.forEach(c => sel.innerHTML += `<option>${c}</option>`);
+    });
+}
+
+/* ------------------- GET METADATA ------------------- */
+function getMetadata() {
+    let form = new FormData();
+    form.append("chunk", document.getElementById("chunkList").value);
+
+    fetch("/metadata", {method:"POST", body: form})
+    .then(r=>r.json())
+    .then(data=>{
+        document.getElementById("metaBox").innerText = JSON.stringify(data, null, 4);
+    });
+}
+
+/* ------------------- DOWNLOAD FILE ------------------- */
+function downloadFile() {
+    let form = new FormData();
+    form.append("name", document.getElementById("fileList").value);
+
+    fetch("/download", {method:"POST", body: form})
+    .then(r=>r.json())
+    .then(data=>{
+        document.getElementById("downMsg").innerText = data.msg;
+    });
+}
+
+/* ------------------- GRAPH DATA ------------------- */
+let uploadTimes = [0.12, 0.15, 0.11, 0.14, 0.16];
+let nodeUsage = [5, 3, 4]; // example values
+
+/* ------------------- UPLOAD TIME CHART ------------------- */
+new Chart(document.getElementById("uploadChart"), {
+    type: "line",
+    data: {
+        labels: ["Run 1", "Run 2", "Run 3", "Run 4", "Run 5"],
+        datasets: [{
+            label: "Upload Time (sec)",
+            data: uploadTimes,
+            borderColor: "rgb(255, 99, 132)",
+            tension: 0.3
+        }]
+    }
+});
+
+/* ------------------- NODE USAGE PIE CHART ------------------- */
+new Chart(document.getElementById("nodeChart"), {
+    type: "pie",
+    data: {
+        labels: ["Node 1", "Node 2", "Node 3"],
+        datasets: [{
+            data: nodeUsage,
+            backgroundColor: ["#ff6384", "#36a2eb", "#4bc0c0"]
+        }]
+    }
+});
+</script>
+
+</body>
+</html>
